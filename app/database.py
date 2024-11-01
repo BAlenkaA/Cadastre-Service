@@ -1,6 +1,8 @@
 import os
+from datetime import datetime
 
 from dotenv import load_dotenv
+from sqlalchemy import DateTime, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declared_attr, declarative_base, sessionmaker, Mapped, mapped_column
 
@@ -21,6 +23,7 @@ class PreBase:
         return cls.__name__.lower()
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 Base = declarative_base(cls=PreBase)
 

@@ -1,10 +1,13 @@
-import re
+from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
+from app.validators import validate_cadastral_number
 
-class QueryCreate(BaseModel):
+
+class QueryBase(BaseModel):
     cadastral_number: str = Field(
         ...,
         min_length=15,
@@ -15,15 +18,45 @@ class QueryCreate(BaseModel):
 
     @field_validator('cadastral_number')
     def check_format_compliance(cls, value):
-        if not re.match(r'\d{2}:\d{2}:\d{6,7}:\d{1,}', value):
-            raise ValueError('Кадастровый номер не соответствует формату')
+        return validate_cadastral_number(value)
+
+
+class QueryCreate(QueryBase):
+    latitude: Optional[Decimal] = Field(
+        None,
+        max_digits=8,
+        decimal_places=6,
+        description="Широта должна быть от -90 до 90 градусов."
+    )
+    longitude: Optional[Decimal] = Field(
+        None,
+        max_digits=9,
+        decimal_places=6,
+        description="Долгота должна быть от -180 до 180 градусов."
+    )
+
+
+    @field_validator('latitude')
+    def check_latitude_range(cls, value):
+        if value is not None and (value <= -90 or value >= 90):
+            raise ValueError('Широта должна быть в диапазоне от -90 до 90.')
         return value
 
 
-class QueryDB(QueryCreate):
+    @field_validator('longitude')
+    def check_longitude_range(cls, value):
+        if value is not None and (value <= -180 or value >= 180):
+            raise ValueError('Долгота должна быть в диапазоне от -180 до 180.')
+        return value
+
+
+class QueryResponse(QueryBase):
+    result: bool
+
+
+class QueryHistoryResponse(QueryCreate):
     id: int
-    latitude: Decimal = Field(..., max_digits=8, decimal_places=6)
-    longitude: Decimal = Field(..., max_digits=9, decimal_places=6)
+    created_at: datetime
     result: bool
 
     model_config = ConfigDict(

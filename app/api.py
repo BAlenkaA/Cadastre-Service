@@ -1,46 +1,44 @@
-from random import randint, uniform
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from fastapi.responses import JSONResponse
+from random import randint
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 import asyncio
 
 from .database import get_async_session
 from .models import QueryHistory
-from .schemas import QueryCreate, QueryDB
+from .schemas import QueryCreate, QueryHistoryResponse, QueryResponse
+from .validators import validate_cadastral_number
 
 api_router = APIRouter()
 
 
-@api_router.post('/query', response_model=QueryDB)
+@api_router.post('/query', response_model=QueryResponse)
 async def create_new_query(
         query: QueryCreate,
         session: AsyncSession = Depends(get_async_session)
 ):
     async with httpx.AsyncClient() as client:
-        current_latitude = round(uniform(-90, 90), 6)
-        current_longitude = round(uniform(-180, 180), 6)
-        response = await get_result()
+        response = await client.get('http://127.0.0.1:8000/result')
         result = response.json()
         is_successful = result.get("result", False)
+        current_latitude = query.latitude if query.latitude is not None else None
+        current_longitude = query.longitude if query.longitude is not None else None
 
         db_query = QueryHistory(
             cadastral_number=query.cadastral_number,
             latitude=current_latitude,
             longitude=current_longitude,
-            result=is_successful)
+            result=is_successful
+        )
 
-        try:
-            session.add(db_query)
-            await session.commit()
-            await session.refresh(db_query)
-        except IntegrityError as e:
-            await session.rollback()
-            if 'unique_lat_long' in str(e):
-                raise HTTPException(status_code=400, detail="Сочетание широты и долготы уже существует.")
-            raise HTTPException(status_code=400, detail="Кадастровый номер уже существует.")
+        session.add(db_query)
+        await session.commit()
+        await session.refresh(db_query)
 
         return db_query
 
@@ -50,15 +48,37 @@ async def server_startup_check():
     return {'message': 'Server is running'}
 
 
-@api_router.get('/history', response_model=list[QueryDB])
-async def get_query_history(session: AsyncSession = Depends(get_async_session)):
-    result = await session.execute(select(QueryHistory))
-    return result.scalars().all()
+@api_router.get('/history', response_model=list[QueryHistoryResponse])
+async def get_query_history(
+        cadastral_number: Optional[str] = Query(
+            None, description="Кадастровый номер для фильтрации истории"),
+        page: int = Query(ge=1, default=1),
+        size: int = Query(ge=1, le=100),
+        session: AsyncSession = Depends(get_async_session)
+):
+    if cadastral_number:
+        try:
+            validate_cadastral_number(cadastral_number)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    query = select(QueryHistory)
+    if cadastral_number:
+        query = query.where(QueryHistory.cadastral_number == cadastral_number)
+
+    query = query.order_by(desc(QueryHistory.created_at)).offset((page - 1) * size).limit(size)
+
+    result = await session.execute(query)
+    records = result.scalars().all()
+
+    if not records:
+        raise HTTPException(status_code=404, detail="Записи не найдены")
+
+    return records
 
 
 @api_router.get('/result')
 async def get_result():
-    await asyncio.sleep(randint(1, 30))
+    await asyncio.sleep(randint(1, 60))
     result = bool(randint(0, 1))
-    response = httpx.Response(200, json={"result": result})
-    return response
+    return JSONResponse(content={'result': result})
