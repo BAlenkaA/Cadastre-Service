@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
-import asyncio
 
 from .database import get_async_session
 from .models import QueryHistory
@@ -53,7 +52,7 @@ async def get_query_history(
         cadastral_number: Optional[str] = Query(
             None, description="Кадастровый номер для фильтрации истории"),
         page: int = Query(ge=1, default=1),
-        size: int = Query(ge=1, le=100),
+        size: int = Query(ge=1, le=100, default=10),
         session: AsyncSession = Depends(get_async_session)
 ):
     if cadastral_number:
@@ -79,6 +78,5 @@ async def get_query_history(
 
 @api_router.get('/result')
 async def get_result():
-    await asyncio.sleep(randint(1, 60))
     result = bool(randint(0, 1))
     return JSONResponse(content={'result': result})
