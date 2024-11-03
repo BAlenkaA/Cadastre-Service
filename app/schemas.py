@@ -12,8 +12,15 @@ class QueryBase(BaseModel):
         ...,
         min_length=15,
         max_length=25,
-        description='Введите кадастровый номер в формате XX:XX:XXXXXX:X, где X - цифра.',
-        example='12:34:567890:10'
+        description='Введите кадастровый номер в формате XX:XX:XXXXXX:X, где X - цифра.'
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"cadastral_number": "12:34:567890:10"}
+            ]
+        }
     )
 
     @field_validator('cadastral_number')

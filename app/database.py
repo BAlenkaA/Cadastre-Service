@@ -3,7 +3,7 @@ from sqlalchemy import DateTime, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declared_attr, declarative_base, sessionmaker, Mapped, mapped_column
 
-from app.config import DATABASE_URL
+from app.config import settings
 
 
 class PreBase:
@@ -17,7 +17,7 @@ class PreBase:
 
 Base = declarative_base(cls=PreBase)
 
-engine = create_async_engine(DATABASE_URL)
+engine = create_async_engine(settings.DATABASE_URL)
 
 AsyncSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False)

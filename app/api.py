@@ -22,7 +22,8 @@ async def create_new_query(
         session: AsyncSession = Depends(get_async_session)
 ):
     async with httpx.AsyncClient() as client:
-        response = await client.get('http://127.0.0.1:8000/result')
+        params = {'cadastral_number': query.cadastral_number}
+        response = await client.get('http://127.0.0.1:8000/result', params=params)
         result = response.json()
         is_successful = result.get("result", False)
         current_latitude = query.latitude if query.latitude is not None else None
@@ -77,6 +78,6 @@ async def get_query_history(
 
 
 @api_router.get('/result')
-async def get_result():
+async def get_result(cadastral_number: str = Query(...)):
     result = bool(randint(0, 1))
     return JSONResponse(content={'result': result})
