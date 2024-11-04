@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  alembic:
+    build: .
+    container_name: alembic_migration
+    working_dir: /app
+    command:
+      - /bin/bash
+      - -c
+      - |
+        [ -d alembic ] ||  
+        /usr/local/bin/alembic init -t async alembic
+        cp env.py alembic/
+        alembic check >>/dev/null 2>&1 || 
+        /usr/local/bin/alembic revision --autogenerate -m "Create migrations `date`"
+        /usr/local/bin/alembic upgrade head
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    container_name: uvicorn_app
+    working_dir: /app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    depends_on:
+      alembic:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
