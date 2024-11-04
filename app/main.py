@@ -1,15 +1,9 @@
-import os
-
-from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from app.api import api_router
+from app.config import settings
 
+from .api import router
 
-load_dotenv()
+app = FastAPI(title=settings.title)
 
-TITLE = os.getenv('TITLE')
-
-app = FastAPI(title=TITLE)
-
-app.include_router(api_router)
+app.include_router(router)

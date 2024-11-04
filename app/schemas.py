@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.validators import validate_cadastral_number
 
@@ -42,13 +42,11 @@ class QueryCreate(QueryBase):
         description="Долгота должна быть от -180 до 180 градусов."
     )
 
-
     @field_validator('latitude')
     def check_latitude_range(cls, value):
         if value is not None and (value <= -90 or value >= 90):
             raise ValueError('Широта должна быть в диапазоне от -90 до 90.')
         return value
-
 
     @field_validator('longitude')
     def check_longitude_range(cls, value):

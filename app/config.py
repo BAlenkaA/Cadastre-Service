@@ -9,7 +9,6 @@ class Settings(BaseSettings):
     db_name: str
     db_port: int
     db_host: str
-    mode: str
 
     @property
     def DATABASE_URL(self):

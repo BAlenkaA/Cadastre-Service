@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import String, CheckConstraint, DECIMAL, Boolean
+from sqlalchemy import DECIMAL, Boolean, CheckConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base

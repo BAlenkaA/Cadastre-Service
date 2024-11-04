@@ -1,22 +1,21 @@
+from random import randint
 from typing import Optional
 
-from fastapi.responses import JSONResponse
-from random import randint
-
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, desc
-from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
+from sqlalchemy import desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from .database import get_async_session
-from .models import QueryHistory
-from .schemas import QueryCreate, QueryHistoryResponse, QueryResponse
-from .validators import validate_cadastral_number
+from app.database import get_async_session
+from app.models import QueryHistory
+from app.schemas import QueryCreate, QueryHistoryResponse, QueryResponse
+from app.validators import validate_cadastral_number
 
-api_router = APIRouter()
+router = APIRouter()
 
 
-@api_router.post('/query', response_model=QueryResponse)
+@router.post('/query', response_model=QueryResponse)
 async def create_new_query(
         query: QueryCreate,
         session: AsyncSession = Depends(get_async_session)
@@ -43,12 +42,12 @@ async def create_new_query(
         return db_query
 
 
-@api_router.get('/ping')
+@router.get('/ping')
 async def server_startup_check():
     return {'message': 'Server is running'}
 
 
-@api_router.get('/history', response_model=list[QueryHistoryResponse])
+@router.get('/history', response_model=list[QueryHistoryResponse])
 async def get_query_history(
         cadastral_number: Optional[str] = Query(
             None, description="Кадастровый номер для фильтрации истории"),
@@ -77,7 +76,7 @@ async def get_query_history(
     return records
 
 
-@api_router.get('/result')
+@router.get('/result')
 async def get_result(cadastral_number: str = Query(...)):
     result = bool(randint(0, 1))
     return JSONResponse(content={'result': result})
