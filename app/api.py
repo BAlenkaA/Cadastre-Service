@@ -1,3 +1,4 @@
+import asyncio
 from random import randint
 from typing import Optional
 
@@ -14,20 +15,36 @@ from app.validators import validate_cadastral_number
 
 router = APIRouter()
 
+TIMEOUT = 60
 
 @router.post('/query', response_model=QueryResponse)
 async def create_new_query(
         query: QueryCreate,
         session: AsyncSession = Depends(get_async_session)
 ):
+    """
+    Создает новый запрос с указанным кадастровым номером и координатами.
+
+    Аргументы:
+        query (QueryCreate): Данные для создания запроса (кадастровый номер, координаты).
+        session (AsyncSession): Асинхронная сессия для работы с базой данных.
+
+    Возвращает:
+        QueryResponse: Ответ с результатом запроса.
+    """
     async with httpx.AsyncClient() as client:
         params = {'cadastral_number': query.cadastral_number}
-        response = await client.get('http://127.0.0.1:8000/result', params=params)
-        result = response.json()
+        try:
+            response = await client.get('http://127.0.0.1:8000/result', params=params, timeout=TIMEOUT)
+            result = response.json()
+        except httpx.ReadTimeout:
+            print("The request timed out.")
+            result = {}
         is_successful = result.get("result", False)
         current_latitude = query.latitude if query.latitude is not None else None
         current_longitude = query.longitude if query.longitude is not None else None
 
+        # Создание нового объекта истории запроса
         db_query = QueryHistory(
             cadastral_number=query.cadastral_number,
             latitude=current_latitude,
@@ -44,6 +61,12 @@ async def create_new_query(
 
 @router.get('/ping')
 async def server_startup_check():
+    """
+    Проверка состояния сервера.
+
+    Возвращает:
+        dict: Сообщение о том, что сервер работает.
+    """
     return {'message': 'Server is running'}
 
 
@@ -55,6 +78,21 @@ async def get_query_history(
         size: int = Query(ge=1, le=100, default=10),
         session: AsyncSession = Depends(get_async_session)
 ):
+    """
+    Получает историю запросов с фильтрацией по кадастровому номеру и постраничной навигацией.
+
+    Аргументы:
+        cadastral_number (Optional[str]): Кадастровый номер для фильтрации (если передан).
+        page (int): Номер страницы для пагинации.
+        size (int): Количество записей на странице.
+        session (AsyncSession): Асинхронная сессия для работы с базой данных.
+
+    Возвращает:
+        List[QueryHistoryResponse]: Список записей истории запросов.
+
+    Исключения:
+        HTTPException: Возникает, если записи не найдены или кадастровый номер некорректен.
+    """
     if cadastral_number:
         try:
             validate_cadastral_number(cadastral_number)
@@ -78,5 +116,15 @@ async def get_query_history(
 
 @router.get('/result')
 async def get_result(cadastral_number: str = Query(...)):
+    """
+    Генерирует случайный результат для кадастрового номера и имитирует задержку выполнения.
+
+    Аргументы:
+        cadastral_number (str): Кадастровый номер для запроса результата.
+
+    Возвращает:
+        JSONResponse: Ответ с результатом запроса (случайный `True` или `False`).
+    """
     result = bool(randint(0, 1))
+    await asyncio.sleep(randint(1, 60)) # Имитируем задержку
     return JSONResponse(content={'result': result})
