@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import (Mapped, declarative_base, declared_attr,
                             mapped_column, sessionmaker)
 
-from app.config import settings
+from app.core.config import settings
 
 
 class PreBase:
@@ -15,7 +15,9 @@ class PreBase:
         return cls.__name__.lower()
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now())
+
 
 Base = declarative_base(cls=PreBase)
 

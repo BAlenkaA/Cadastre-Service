@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.validators import validate_cadastral_number
+from app.api.validators import validate_cadastral_number
 
 
 class QueryBase(BaseModel):
@@ -19,7 +19,8 @@ class QueryBase(BaseModel):
         ...,
         min_length=15,
         max_length=25,
-        description='Введите кадастровый номер в формате XX:XX:XXXXXX:X, где X - цифра.'
+        description='Введите кадастровый номер в формате'
+                    ' XX:XX:XXXXXX:X, где X - цифра.'
     )
 
     model_config = ConfigDict(
@@ -33,16 +34,14 @@ class QueryBase(BaseModel):
     @field_validator('cadastral_number')
     def check_format_compliance(cls, value):
         """
-        Валидатор для проверки соответствия кадастрового номера формату 'XX:XX:XXXXXX:X'.
+        Валидатор для проверки соответствия кадастрового номера формату
+         'XX:XX:XXXXXX:X'.
 
         Аргументы:
             value (str): Кадастровый номер для проверки.
 
         Возвращает:
             str: Кадастровый номер, если он соответствует формату.
-
-        Исключения:
-            ValueError: Если кадастровый номер не соответствует формату.
         """
         return validate_cadastral_number(value)
 
@@ -52,8 +51,10 @@ class QueryCreate(QueryBase):
     Модель для создания нового запроса с координатами.
 
     Атрибуты:
-        latitude (Optional[Decimal]): Широта в диапазоне от -90 до 90 градусов.
-        longitude (Optional[Decimal]): Долгота в диапазоне от -180 до 180 градусов.
+        latitude (Optional[Decimal]):
+         Широта в диапазоне от -90 до 90 градусов.
+        longitude (Optional[Decimal]):
+         Долгота в диапазоне от -180 до 180 градусов.
     """
     latitude: Optional[Decimal] = Field(
         None,
@@ -117,16 +118,20 @@ class QueryResponse(QueryBase):
 
 class QueryHistoryResponse(QueryCreate):
     """
-    Модель для истории запросов, включая идентификатор, дату создания и результат.
+    Модель для истории запросов, включая идентификатор,
+     дату создания и результат.
 
     Атрибуты:
         id (int): Идентификатор записи истории.
         created_at (datetime): Дата и время создания записи.
         result (bool): Результат выполнения запроса.
+        user_id (int): Идентификатор пользователя,
+         которому принадлежит эта запись истории.
     """
     id: int
     created_at: datetime
     result: bool
+    user_id: int
 
     model_config = ConfigDict(
         from_attributes=True

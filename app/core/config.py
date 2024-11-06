@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     db_name: str
     db_port: int
     db_host: str
+    secret: str = 'SECRET'
 
     @property
     def DATABASE_URL(self):
@@ -19,5 +20,6 @@ class Settings(BaseSettings):
     model_config = ConfigDict(
         env_file='.env'
     )
+
 
 settings = Settings()
